@@ -64,23 +64,18 @@ def calc_karma_totals(comment_karma,submission_karma):
 		elif submission_karma.get(subreddit) is not None:
 			combined_karma[subreddit] =submission_karma.get(subreddit) 
 		else:
-			print("Cannot find subreddit "+subreddit+"\n")
-			pprint.pprint(combined_karma)
-			pprint.pprint(comment_karma)
-			pprint.pprint(submission_karma)
-			pprint.pprint(subreddits)
-			pprint.pprint(subreddit)
-			raise Exception #This should never happen
+			raise Exception("Cannot Find Subreddit") #This should never happen
 	return combined_karma
 
 
-def get_user_info(user,reddit):
+def get_user_info(user,reddit,get_karma=True):
 	user_info = {}
-	user_info['submission_karma_breakdown'] = get_karma_breakdown(user,reddit,limit)
-	user_info['comment_karma_breakdown'] = get_karma_breakdown(user,reddit,limit,'comment')
-	user_info['combined_karma_breakdown'] = calc_karma_totals(
-		user_info['comment_karma_breakdown'],
-		user_info['submission_karma_breakdown'])
+	if get_karma:
+		user_info['submission_karma_breakdown'] = get_karma_breakdown(user,reddit,limit)
+		user_info['comment_karma_breakdown'] = get_karma_breakdown(user,reddit,limit,'comment')
+		user_info['combined_karma_breakdown'] = calc_karma_totals(
+			user_info['comment_karma_breakdown'],
+			user_info['submission_karma_breakdown'])
 	user_info['redditor']=user
 
 	return user_info
@@ -92,7 +87,7 @@ def get_target_info(subredditName,reddit):
 	target_info['praw_subreddit'] = target
 	target_info['moderators'] = []
 	for moderator in moderators:
-		target_info['moderators'].append(get_user_info(moderator,reddit))
+		target_info['moderators'].append(get_user_info(moderator,reddit,False))
 	
 	target_info['latest_submissions'] = target.get_new()
 	target_info['latest_comments'] = target.get_new()
@@ -137,7 +132,10 @@ def format_user_report(user):
 	comment = (comment + "User Total Submission Karma:" + 
 		str(user['redditor'].link_karma)+ "\n\n")
 
-	comment = comment + format_karma_report(user)
+	if(user.get('submission_karma_breakdown') is not None):
+		comment = comment + format_karma_report(user)
+	
+	comment = comment+"\n\n"
 	
 	return comment
 
@@ -160,6 +158,7 @@ def format_comment(target_sub,author):
 	comment = comment + format_target_report(target_sub)
 	return comment
 
+def publish_comment(submission,comment):
 	
 
 def main():
@@ -167,12 +166,14 @@ def main():
 	argparser.add_argument('--subreddit',help='Chooses a subreddit to target',default=default_sub)
 	argparser.add_argument('--no-comment',help='Do not post comments in threads',default=False,dest='no_comment')
 	argparser.add_argument('--print-comment',help='Print comments to stdout',default=False,dest='print_comment')
-	
+	argparser.add_argument('--ignore-dup',help='Ingore Duplicates, comment to thread even if the bot already has',default=False,dest='ignore_dup')
+
 	args = argparser.parse_args()
 
 	subredditName=args.subreddit
 	no_comment = args.no_comment
 	print_comment = args.print_comment	
+	ignore_dup = args.ignore_dup	
 
 	reddit = praw.Reddit('redditRequestMonitor bot by /u/ki6uoc (development)')
 	reddit.login()
@@ -182,15 +183,24 @@ def main():
 	submissions=subreddit.get_new(limit=10)
 
 	for submission in submissions:
-		authorInfo = get_user_info(submission.author,reddit)
-		targetSubInfo = get_target_info(url_to_subreddit(submission.url),reddit)
-
-	comment = format_comment(targetSubInfo,authorInfo)
-
-	if(print_comment):
-		print(comment)
-
+		already_posted = False 
+		if not ignore_dup:
+			for comment in praw.helpers.flatten_tree(submission.comments):
+				if comment.author.name == r.user.name:
+					already_posted = True		
 	
+		if not already_posted:
+			authorInfo = get_user_info(submission.author,reddit)
+			targetSubInfo = get_target_info(url_to_subreddit(submission.url),reddit)
+
+			comment = format_comment(targetSubInfo,authorInfo)
+
+			if(print_comment):
+				print(comment)
+			
+			if not no_comment:
+				publish_comment(submission,comment)
+		
 	sys.exit();
 
 
