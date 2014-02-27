@@ -13,7 +13,8 @@ import argparse
 import pprint
 import string
 import requests
-from time import gmtime, strftime
+from time import gmtime, strftime, mktime
+from datetime import timedelta
 
 default_sub='fakefakefake'
 limit=1000
@@ -58,8 +59,8 @@ def calc_karma_totals(comment_karma,submission_karma):
 	for subreddit in subreddits:
 		if (comment_karma.get(subreddit) is not None
 			and submission_karma.get(subreddit) is not None):
-			combined_karma[subreddit] = comment_karma.get(subreddit) 
-			+ submission_karma.get(subreddit)
+			combined_karma[subreddit] = (comment_karma.get(subreddit) 
+			+ submission_karma.get(subreddit))
 		elif comment_karma.get(subreddit) is not None: 
 			combined_karma[subreddit] =comment_karma.get(subreddit) 
 		elif submission_karma.get(subreddit) is not None:
@@ -123,6 +124,12 @@ def format_user_report(user):
 	comment = (comment + "User account was created at: " +
 		strftime("%A, %d %B %Y %H:%M:%S +0000", gmtime(user['redditor'].created_utc)) 
 		+ "\n\n")
+	comment = (comment + "User account age:" + 
+			str(
+				timedelta(
+					seconds=mktime(gmtime())-user['redditor'].created_utc
+				)
+			) + "\n\n")
 	
 	comment = (comment + "User has verified E-mail: " + 
 		str(user['redditor'].has_verified_email) + "\n\n")
@@ -144,7 +151,7 @@ def format_target_report(target_sub):
 	subreddit_name =target_sub['praw_subreddit'].display_name
 	comment = ""
 	comment = (comment +"Subreddit /r/"+subreddit_name+"/ currently has "+
-			  str(len(target_sub['moderators'])) + "Moderators\n\n") 
+			  str(len(target_sub['moderators'])) + " moderators\n\n") 
 	comment = (comment + "### Moderators of /r/"+subreddit_name+ "\n\n")
 	for moderator in target_sub['moderators']:
 		comment = comment+format_user_report(moderator)
