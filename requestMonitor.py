@@ -72,7 +72,7 @@ def get_user_info(user,reddit,get_karma=True):
 	user_info = {}
 	if get_karma:
 		user_info['submission_karma_breakdown'] = get_karma_breakdown(user,reddit,limit)
-		user_info['comment_karma_breakdown'] = get_karma_breakdown(user,reddit,limit,'comment')
+		user_info['comment_karma_breakdown'] = get_karma_breakdown(user,reddit,limit,'comments')
 		user_info['combined_karma_breakdown'] = calc_karma_totals(
 			user_info['comment_karma_breakdown'],
 			user_info['submission_karma_breakdown'])
@@ -99,7 +99,7 @@ def format_karma_report(user):
 	comment = (comment + "Karma for the user's latest "+
 			str(limit)+" comments and submissions\n\n")
 	comment = comment + "Subreddit | Link | Comment | Total \n" 
-	comment = comment + "Subreddit | -:-| -:- | -:- \n" 
+	comment = comment + "|:--:|:--:|:--:|:--:|\n" 
 
 	for key in user['combined_karma_breakdown'].keys():
 		comment = (comment + key + " | " +
@@ -119,13 +119,13 @@ def format_user_report(user):
 
 	name = user['redditor'].name
 	comment = "## Report for /u/"+name+"/ ##\n\n"
-	comment = (comment + "User account was created at " +
+	comment = (comment + "User account was created at: " +
 		strftime("%A, %d %B %Y %H:%M:%S +0000", gmtime(user['redditor'].created_utc)) 
 		+ "\n\n")
 	
-	comment = (comment + "User has verified E-mail:" + 
+	comment = (comment + "User has verified E-mail: " + 
 		str(user['redditor'].has_verified_email) + "\n\n")
-	comment = (comment + "User has Reddit Gold^tm:" + 
+	comment = (comment + "User has Reddit Gold^tm: " + 
 		str(user['redditor'].is_gold) + "\n\n")
 	comment = (comment + "User Total Comment Karma:" + 
 		str(user['redditor'].comment_karma) + "\n\n")
@@ -159,6 +159,7 @@ def format_comment(target_sub,author):
 	return comment
 
 def publish_comment(submission,comment):
+	submission.add_comment(comment)
 	
 
 def main():
@@ -186,7 +187,7 @@ def main():
 		already_posted = False 
 		if not ignore_dup:
 			for comment in praw.helpers.flatten_tree(submission.comments):
-				if comment.author.name == r.user.name:
+				if comment.author.name == reddit.user.name:
 					already_posted = True		
 	
 		if not already_posted:
