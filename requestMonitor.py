@@ -144,7 +144,7 @@ def format_target_report(target_sub):
 	subreddit_name =target_sub['praw_subreddit'].display_name
 	comment = ""
 	comment = (comment +"Subreddit /r/"+subreddit_name+"/ currently has "+
-			  str(len(target_sub['moderators'])) + "Moderators") 
+			  str(len(target_sub['moderators'])) + "Moderators\n\n") 
 	comment = (comment + "### Moderators of /r/"+subreddit_name+ "\n\n")
 	for moderator in target_sub['moderators']:
 		comment = comment+format_user_report(moderator)
