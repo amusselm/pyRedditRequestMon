@@ -12,6 +12,7 @@ import sys
 import argparse
 import pprint
 import string
+import requests
 from time import gmtime, strftime
 
 default_sub='fakefakefake'
@@ -153,9 +154,18 @@ def format_target_report(target_sub):
 	
 def format_comment(target_sub,author):
 	comment = "# Report for Requestor \n\n" 
-	comment = comment + format_user_report(author)
+	if author is not None:
+		comment = comment + format_user_report(author)
+	else:
+		comment = comment + "Author information " \
+			+ "could not be loaded\n\n"
+		
 	comment = comment + "# Report for Requested Subreddit \n\n" 
-	comment = comment + format_target_report(target_sub)
+	if target_sub is not None:
+		comment = comment + format_target_report(target_sub)
+	else:
+		comment = comment + "Subreddit information " \
+			+ "could not be loaded\n\n"
 	return comment
 
 def publish_comment(submission,comment):
@@ -185,16 +195,24 @@ def main():
 
 	for submission in submissions:
 		already_posted = False 
+		comment = ""
 		if not ignore_dup:
 			for comment in praw.helpers.flatten_tree(submission.comments):
 				if comment.author.name == reddit.user.name:
 					already_posted = True		
 	
 		if not already_posted:
-			authorInfo = get_user_info(submission.author,reddit)
-			targetSubInfo = get_target_info(url_to_subreddit(submission.url),reddit)
+			try:
+				authorInfo = get_user_info(submission.author,reddit)
+			except requests.exceptions.HTTPError:
+				authorInfo = None
+ 
+			try:
+				targetSubInfo = get_target_info(url_to_subreddit(submission.url),reddit)
+			except requests.exceptions.HTTPError:
+				targetSubInfo = None
 
-			comment = format_comment(targetSubInfo,authorInfo)
+			comment = comment + format_comment(targetSubInfo,authorInfo)
 
 			if(print_comment):
 				print(comment)
